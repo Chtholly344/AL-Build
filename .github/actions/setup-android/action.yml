@@ -19,12 +19,9 @@ runs:
         java-version: ${{ inputs.java-version }}
         distribution: "temurin"
 
-    - name: Set up Android SDK
+    - name: Set up Android SDK and build-tools
       uses: android-actions/setup-android@v4
       with:
         accept-android-sdk-licenses: true
         log-accepted-android-sdk-licenses: false
-
-    - name: Install build-tools
-      run: yes | sdkmanager --install "build-tools;${{ inputs.build-tools-version }}"
-      shell: bash
+        packages: "build-tools;${{ inputs.build-tools-version }}"
