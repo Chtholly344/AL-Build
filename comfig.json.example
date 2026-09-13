@@ -1,0 +1,28 @@
+{
+  "servers": [
+    {
+      "id": "Bilibili",
+      "type": "apk",
+      "url": "https://example.com/path/to/bilibili.apk",
+      "label": "Bilibili 服"
+    },
+    {
+      "id": "TW",
+      "type": "xapk",
+      "region": "TW",
+      "label": "台服"
+    },
+    {
+      "id": "EN",
+      "type": "xapk",
+      "region": "EN",
+      "label": "国际服"
+    },
+    {
+      "id": "JP",
+      "type": "xapk",
+      "region": "JP",
+      "label": "日服"
+    }
+  ]
+}

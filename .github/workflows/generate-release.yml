@@ -1,0 +1,223 @@
+name: Generate & Release
+
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  JAVA_VERSION: "21"
+  BUILD_TOOLS_VERSION: "36.0.0"
+
+jobs:
+  # ===================================================================
+  # Job 1：prepare — 获取配置、验证、生成构建矩阵 & Release body 模板
+  # ===================================================================
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Fetch server config from SERVER_CONFIG_URL
+        id: config
+        run: |
+          URL="${{ vars.SERVER_CONFIG_URL }}"
+          if [ -z "$URL" ]; then
+            echo "::error::SERVER_CONFIG_URL is not set! Go to Settings → Secrets and variables → Actions → Variables to set it."
+            exit 1
+          fi
+          echo "Fetching server config from: $URL"
+          curl -sL "$URL" -o server_config.json
+          echo "servers=$(jq -c '.servers' server_config.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate server config
+        run: |
+          COUNT=$(jq '.servers | length' server_config.json)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::Server list is empty — check your SERVER_CONFIG_URL content."
+            exit 1
+          fi
+          echo "✅ Found $COUNT server(s) to build:"
+          jq -r '.servers[] | "   - \(.label) [\(.type | ascii_upcase)]"' server_config.json
+
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          MATRIX=$(jq -c '{"server": .servers}' server_config.json)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "Build matrix: $MATRIX"
+
+      - name: Generate release body header
+        run: |
+          cat > release_body_header.md << 'EOF'
+          # 🎮 AzurLane JMBQ Build
+
+          > Auto-built from Tag `${{ github.ref_name }}`
+
+          <details open>
+            <summary><b>📋 Servers built in this release</b></summary>
+
+          EOF
+          # Append server list (plain text bullet points)
+          jq -r '.servers[] | "    - \(.label) (`\(.type)`)"' server_config.json >> release_body_header.md
+          cat >> release_body_header.md << 'EOF'
+
+          </details>
+
+          ---
+
+          <details>
+            <summary><b>📖 中文安装说明 - 点击展开</b></summary>
+
+          1. 在下方 Assets 列表中找到你需要的版本前缀，下载该服务器名称前缀的所有以 `7z.00*` 结尾的文件
+          2. 解压时只需要选择 `XXX.7z.001` 解压即可
+          3. 在解压后的文件夹中找到 APK / XAPK 文件并安装
+
+          > **注意**：由于重新打包后签名不同，部分第三方登录可能失效，建议使用扫码或验证码登录。
+
+          </details>
+
+          <details>
+            <summary><b>📖 English Installation Instructions - Click to expand</b></summary>
+
+          1. Find the version prefix you need in the Assets list below, and download all files ending with `7z.00*` that have that server name prefix
+          2. When extracting, simply select the `XXX.7z.001` file to decompress
+          3. Find the APK / XAPK file in the extracted folder and install it
+
+          > **Note**: Due to signature changes after repacking, some third-party login methods may not work. Please use QR code or verification code login instead.
+
+          </details>
+
+          <details>
+            <summary><b>📝 变更日志 / Changelog</b></summary>
+
+          EOF
+
+      - name: Upload release body header
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-body-header
+          path: release_body_header.md
+          retention-days: 1
+
+  # ===================================================================
+  # Job 2：build — 矩阵并行构建所有区服
+  # ===================================================================
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install build-tools
+        run: yes | sdkmanager --install "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
+
+      - name: Build ${{ matrix.server.label }}
+        id: build_step
+        shell: bash
+        run: |
+          chmod +x assets/merge_build.sh
+          if [ "${{ matrix.server.type }}" = "xapk" ]; then
+            echo "🔧 XAPK mode — region: ${{ matrix.server.region }}"
+            ./assets/merge_build.sh "${{ matrix.server.region }}"
+          else
+            echo "🔧 APK mode — server: ${{ matrix.server.id }}"
+            ./assets/merge_build.sh "${{ matrix.server.id }}" "${{ matrix.server.url }}"
+          fi
+
+      - name: List built artifacts
+        run: |
+          echo "=== Built files for ${{ matrix.server.id }} ==="
+          ls -la *.7z.* 2>/dev/null || echo "(no 7z files at root)"
+          ls -la */*.7z.* 2>/dev/null || echo "(no 7z files in subdirs)"
+
+      - name: Upload artifacts for ${{ matrix.server.id }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.server.id }}
+          path: "*.7z.*"
+          if-no-files-found: error
+          retention-days: 1
+
+  # ===================================================================
+  # Job 3：release — 生成变更日志、收集产物、创建 Release
+  # ===================================================================
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # 拉取完整历史以生成变更日志
+
+      - name: Download release body header
+        uses: actions/download-artifact@v4
+        with:
+          name: release-body-header
+          path: release_body
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect and flatten release assets
+        run: |
+          mkdir -p release_assets
+          find artifacts -type f -name "*.7z.*" -exec cp -v {} release_assets/ \;
+          echo ""
+          echo "=== Collected release assets ($(ls release_assets/ | wc -l) files) ==="
+          ls -la release_assets/
+
+      - name: Generate changelog from git log
+        run: |
+          {
+            echo ""
+            PREV_TAG=$(git describe --tags --abbrev=0 @^ 2>/dev/null || echo "")
+            if [ -n "$PREV_TAG" ]; then
+              echo "Changes since **$PREV_TAG**:"
+              echo ""
+              git log "$PREV_TAG"..@ --oneline --no-decorate | while read hash msg; do
+                echo "  - $msg"
+              done
+            else
+              echo "Initial release — no previous tag found."
+            fi
+            echo ""
+            echo "</details>"
+          } >> release_body/release_body_header.md
+
+      - name: Show final release body
+        run: cat release_body/release_body_header.md
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: "AzurLane JMBQ ${{ github.ref_name }} Build"
+          artifacts: "release_assets/*"
+          artifactContentType: application/octet-stream
+          bodyFile: release_body/release_body_header.md
+          allowUpdates: false
+          skipIfReleaseExists: true

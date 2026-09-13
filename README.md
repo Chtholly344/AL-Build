@@ -2,16 +2,16 @@
   <img src="https://count.getloli.com/@azurlanejmbq?name=azurlanejmbq&theme=moebooru&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问计数" />
   <h3 align="center">AL Build</h3>
 
-  ![forks](https://img.shields.io/github/forks/Chtholly344/Azurlane-Build.svg?style=flat&label=Forks)
-  ![stars](https://img.shields.io/github/stars/Chtholly344/Azurlane-Build?style=flat&label=Stars)
-  ![issues](https://img.shields.io/github/issues/Chtholly344/Azurlane-Build?label=Issues)
+  ![forks](https://img.shields.io/github/forks/Chtholly344/AL-Build.svg?style=flat&label=Forks)
+  ![stars](https://img.shields.io/github/stars/Chtholly344/AL-Build?style=flat&label=Stars)
+  ![issues](https://img.shields.io/github/issues/Chtholly344/AL-Build?label=Issues)
   
   <p align="center">
-    <strong>🚨 项目停更公告</strong>
-    <br/>
-    因上游依赖仓库已删库，本仓库 Actions 脚本已失效，现已移除所有相关内容。
-    <br/>
-    现存的 Release 历史版本仅供学习研究参考。用户下载及使用历史版本均属于个人行为，须自行承担包括但不限于账号风险、系统损害等一切后果，本仓库及作者概不承担任何连带责任。 本项目即日起永久停止更新支持，感谢您的理解与支持。
+    使用 Github Workflow 一键构建对应区服的 APK/XAPK 安装包
+    <br />
+    <br />
+    <a>发现问题？提交</a>
+    <a href="https://github.com/Chtholly344/AL-Build/issues">Issue</a>
   </p>
 </div>
 
@@ -32,6 +32,27 @@
 
 ---
 
+## 项目目录
+```
+
+├── 📁 .github
+│    └── 📁 workflows
+│         ├── ⚙️ main.yml  # APK 构建流
+│         ├── ⚙️ xapk.yml  # XAPK 构建流
+│         └── ⚙️ generate-release.yml  # 标签触发，多区服矩阵构建并发布 Release
+├── 📁 assets
+│    ├── 📁 images  # 图片
+│    ├── 📁 key  # 签名文件
+│    │    ├── 📄 testkey.pk8
+│    │    └── 📄 testkey.x509.pem
+│    └── 📄 merge_build.sh  # 构建脚本 
+├── 📝 comfig.json.example  # 区服配置示例（配合 generate-release.yml）
+└── 📝 README.md
+
+```
+
+---
+
 ## 已知且不会解决的问题
 - **KR服**：启动无响应，可能触发反作弊机制。
 - **HW服**：启动界面卡顿，已确认是由于 HMS Core 的签名验证问题导致。
@@ -39,5 +60,11 @@
 ---
 
 ## 相关仓库
-1. ~~[JMBQ/azurlane](https://github.com/JMBQ/azurlane) (已删库)~~
+1. ~~[JMBQ/azurlane](https://github.com/JMBQ/azurlane) (被封禁)~~
+2. [JMBQ01/azurlan](https://github.com/JMBQ01/azurlan)
 2. [n0k0m3/PerseusCI](https://github.com/n0k0m3/PerseusCI)
+
+---
+
+## Star历史
+[![Star History Chart](https://api.star-history.com/svg?repos=Chtholly344/AL-Build&type=Date)](https://star-history.com/#Chtholly344/AL-Build&Date)
