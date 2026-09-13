@@ -215,7 +215,7 @@ DOWNLOAD_APK() {
         "${DOWNLOAD_DIR}/apkeep" -a "${GAME_BUNDLE_ID}" "${DOWNLOAD_DIR}/" || exit 1
         unzip -o "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk" -d "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}" || exit 1
         mv "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}/${GAME_BUNDLE_ID}.apk" "${APK_FILE}"
-        rm -rf "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk" "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}"
+        rm -f "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk"
     else
         echo "下载 APK..."
         curl -L -o "${APK_FILE}" "${APK_URL}" || exit 1
