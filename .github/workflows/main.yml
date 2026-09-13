@@ -1,9 +1,9 @@
-name: APK AzurLane JMBQ Build Work
+name: APK AL JMBQ Build Work
 on:
   workflow_dispatch:
     inputs:
       server_name:
-        description: '区服名称-必须（必须是英文字母！例如 Bilibili，台服和外服请使用XAPK AzurLane JMBQ Build Work）'
+        description: '区服名称-必须（必须是英文字母！例如 Bilibili，台服和外服请使用XAPK AL JMBQ Build Work）'
         required: true
         type: string
         default: ''
@@ -20,30 +20,7 @@ jobs:
       contents: write
 
     steps:
-      # 步骤1：检出仓库代码
-      - name: Checkout code
-        uses: actions/checkout@v6
-      
-      # 步骤2：设置 Java JDK
-      - name: Setup Java JDK
-        uses: actions/setup-java@v5
-        with:
-          java-version: "21"
-          distribution: "temurin"
-
-      # 步骤3：设置 Android SDK
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          # 自动接受 SDK 许可证
-          accept-android-sdk-licenses: true
-          # 关闭冗长的许可证文本日志打印 
-          log-accepted-android-sdk-licenses: false
-
-      # 步骤4：安装 build-tools
-      - name: Install build-tools
-        run: |
-          yes | sdkmanager --install "build-tools;36.0.0"
+      - uses: ./.github/actions/setup-android
       
       # 步骤5：执行构建流程
       - name: Build APK
@@ -56,20 +33,26 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: "${{ env.JMBQ_VERSION }}-APK"
-          name: "AzurLane JMBQ ${{ env.JMBQ_VERSION }} Build APK"
+          name: "AL JMBQ ${{ env.JMBQ_VERSION }} Build APK"
           artifacts: "${{ github.event.inputs.server_name }}-V.${{ env.VERSION }}.7z.*"
           allowUpdates: true
           body: |
             <details>
-              <summary>中文安装说明 - 点击展开</summary>
-                1. 在下方列表中找到你需要的版本前缀，下载该服务器名称前缀的所有以 7z.00* 结尾的文件</br>
-                2. 解压时只需要选择"XXX.7z.001"解压即可</br>
-                3. 在解压后的文件夹中找到apk文件并安装
+            <summary>📖 中文安装说明</summary>
+
+            1. 在下方 Assets 列表中找到你需要的版本前缀，下载对应所有 `7z.00*` 文件
+            2. 选择 `XXX.7z.001` 解压
+            3. 在解压后的文件夹中找到 APK 文件并安装
+
+            > **注意**：重新打包后签名与原版不一致，第三方快捷登录可能失效，建议使用扫码或验证码登录。
             </details>
-            
+
             <details>
-              <summary>English Installation Instructions - Click to expand</summary>
-                1. Find the version prefix you need in the list below, and download all files ending with 7z.00* that have that server name prefix</br>
-                2. When extracting, simply select the "XXX.7z.001" file to decompress</br>
-                3. Find the APK file in the extracted folder and install it
+            <summary>📖 English Installation Instructions</summary>
+
+            1. Find your server prefix in the Assets list below, download all `7z.00*` files
+            2. Extract `XXX.7z.001` to get the APK
+            3. Install the APK on your device
+
+            > **Note**: The app signature differs from the official version. Third-party login may not work — use QR code or SMS verification instead.
             </details>

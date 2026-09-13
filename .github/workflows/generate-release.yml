@@ -52,16 +52,13 @@ jobs:
       - name: Generate release body header
         run: |
           cat > release_body_header.md << 'EOF'
-          # 🎮 AzurLane JMBQ Build
-
-          > Auto-built from Tag `${{ github.ref_name }}`
+          > `${{ github.ref_name }}` 自动构建
 
           <details open>
-            <summary><b>📋 Servers built in this release</b></summary>
+          <summary><b>📋 Servers built in this release</b></summary>
 
           EOF
-          # Append server list (plain text bullet points)
-          jq -r '.servers[] | "    - \(.label) (`\(.type)`)"' server_config.json >> release_body_header.md
+          jq -r '.servers[] | "  - \(.label) (`\(.type)`)"' server_config.json >> release_body_header.md
           cat >> release_body_header.md << 'EOF'
 
           </details>
@@ -69,29 +66,29 @@ jobs:
           ---
 
           <details>
-            <summary><b>📖 中文安装说明 - 点击展开</b></summary>
+          <summary><b>📖 中文安装说明</b></summary>
 
-          1. 在下方 Assets 列表中找到你需要的版本前缀，下载该服务器名称前缀的所有以 `7z.00*` 结尾的文件
-          2. 解压时只需要选择 `XXX.7z.001` 解压即可
+          1. 在下方 Assets 列表中找到你需要的版本前缀，下载对应所有 `7z.00*` 文件
+          2. 选择 `XXX.7z.001` 解压
           3. 在解压后的文件夹中找到 APK / XAPK 文件并安装
 
-          > **注意**：由于重新打包后签名不同，部分第三方登录可能失效，建议使用扫码或验证码登录。
+          > **注意**：重新打包后签名与原版不一致，第三方快捷登录可能失效，建议使用扫码或验证码登录。
 
           </details>
 
           <details>
-            <summary><b>📖 English Installation Instructions - Click to expand</b></summary>
+          <summary><b>📖 English Installation Instructions</b></summary>
 
-          1. Find the version prefix you need in the Assets list below, and download all files ending with `7z.00*` that have that server name prefix
-          2. When extracting, simply select the `XXX.7z.001` file to decompress
-          3. Find the APK / XAPK file in the extracted folder and install it
+          1. Find your server prefix in the Assets list below, download all `7z.00*` files
+          2. Extract `XXX.7z.001` to get the APK / XAPK
+          3. Install the APK / XAPK on your device
 
-          > **Note**: Due to signature changes after repacking, some third-party login methods may not work. Please use QR code or verification code login instead.
+          > **Note**: The app signature differs from the official version. Third-party login may not work — use QR code or SMS verification instead.
 
           </details>
 
           <details>
-            <summary><b>📝 变更日志 / Changelog</b></summary>
+          <summary><b>📝 变更日志 / Changelog</b></summary>
 
           EOF
 
@@ -106,6 +103,11 @@ jobs:
   # Job 2：build — 矩阵并行构建所有区服
   # ===================================================================
   build:
+    # 显式指定作业显示名：matrix.server 是对象，若不指定 name，
+    # GitHub 会把整个对象（id/type/url/label...）拼进自动生成的作业名，
+    # 显示成 build({"id":"Bilibili","type":"apk",...}) 这样的一长串。
+    # 显示名优先用 label，label 缺失时才回退到 id（不会两者拼接）。
+    name: "${{ matrix.server.label || matrix.server.id }}"
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -114,24 +116,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Java JDK
-        uses: actions/setup-java@v5
+      - uses: ./.github/actions/setup-android
         with:
           java-version: ${{ env.JAVA_VERSION }}
-          distribution: "temurin"
+          build-tools-version: ${{ env.BUILD_TOOLS_VERSION }}
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: false
-
-      - name: Install build-tools
-        run: yes | sdkmanager --install "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
-
-      - name: Build ${{ matrix.server.label }}
+      - name: Run build script
         id: build_step
         shell: bash
         run: |
@@ -215,7 +205,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
-          name: "AzurLane JMBQ ${{ github.ref_name }} Build"
+          name: "AL JMBQ ${{ github.ref_name }} Build"
           artifacts: "release_assets/*"
           artifactContentType: application/octet-stream
           bodyFile: release_body/release_body_header.md

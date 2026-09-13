@@ -1,0 +1,32 @@
+# Checkout → JDK → Android SDK → build-tools
+name: Setup Android Build Environment
+description: Install Java JDK, Android SDK, and build-tools for APK/XAPK building
+
+inputs:
+  java-version:
+    description: Java JDK version
+    default: "21"
+  build-tools-version:
+    description: Android build-tools version
+    default: "36.0.0"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup Java JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: "temurin"
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v4
+      with:
+        accept-android-sdk-licenses: true
+        log-accepted-android-sdk-licenses: false
+
+    - name: Install build-tools
+      run: yes | sdkmanager --install "build-tools;${{ inputs.build-tools-version }}"
+      shell: bash
