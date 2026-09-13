@@ -1,0 +1,72 @@
+name: XAPK AzurLane JMBQ Build Work
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Select Game Server'
+        required: true
+        type: choice
+        options:
+          - 'TW'
+          - 'EN'
+          - 'JP'
+          - 'KR(Broken)'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # 步骤1：检出仓库代码
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      # 步骤2：设置 Java JDK
+      - name: Setup Java JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      # 步骤3：设置 Android SDK
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          # 自动接受 SDK 许可证
+          accept-android-sdk-licenses: true
+          # 关闭冗长的许可证文本日志打印 
+          log-accepted-android-sdk-licenses: false
+
+      # 步骤4：安装 build-tools
+      - name: Install build-tools
+        run: |
+          yes | sdkmanager --install "build-tools;36.0.0"
+      
+      - name: Build APK
+        run: |
+          chmod +x assets/merge_build.sh
+          ./assets/merge_build.sh "${{ github.event.inputs.region }}"
+
+      - name: Release and Upload Assets
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "${{ env.JMBQ_VERSION }}-XAPK"
+          name: "AzurLane JMBQ ${{ env.JMBQ_VERSION }} Build XAPK"
+          artifacts: "${{ github.event.inputs.region }}-V.${{ env.VERSION }}.7z.*"
+          allowUpdates: true
+          body: |
+            <details>
+              <summary>中文安装说明 - 点击展开</summary>
+                1. 在下方列表中找到你需要的版本前缀，下载该服务器名称前缀的所有以 7z.00* 结尾的文件</br>
+                2. 解压时只需要选择"XXX.7z.001"解压即可</br>
+                3. 在解压后的文件夹中找到xapk文件并安装，安装方法请自行查询相关教程
+            </details>
+            
+            <details>
+              <summary>English Installation Instructions - Click to expand</summary>
+                1. Find the version prefix you need in the list below, and download all files ending with 7z.00* that have that server name prefix</br>
+                2. When extracting, simply select the "XXX.7z.001" file to decompress</br>
+                3. Find the XAPK file in the extracted folder and install it, please refer to the relevant tutorials for installation methods
+            </details>
