@@ -46,7 +46,7 @@
 │    │    ├── 📄 testkey.pk8
 │    │    └── 📄 testkey.x509.pem
 │    └── 📄 merge_build.sh  # 构建脚本 
-├── 📝 comfig.json.example  # 区服配置示例（配合 generate-release.yml）
+├── 📝 config.json.example  # 区服配置示例（配合 generate-release.yml）
 └── 📝 README.md
 
 ```
