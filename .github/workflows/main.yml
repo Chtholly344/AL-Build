@@ -20,6 +20,7 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-android
       
       # 步骤5：执行构建流程

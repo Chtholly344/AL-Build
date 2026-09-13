@@ -1,4 +1,4 @@
-# Checkout → JDK → Android SDK → build-tools
+# JDK → Android SDK → build-tools
 name: Setup Android Build Environment
 description: Install Java JDK, Android SDK, and build-tools for APK/XAPK building
 
@@ -13,8 +13,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v6
-
     - name: Setup Java JDK
       uses: actions/setup-java@v5
       with:
