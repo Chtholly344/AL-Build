@@ -20,34 +20,45 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Fetch server config from SERVER_CONFIG_URL
-        id: config
+      - name: 定义硬编码 XAPK 区服
+        id: xapk-servers
+        run: |
+          XAPK_SERVERS='[
+            {"id":"TW","type":"xapk","region":"TW","label":"碧蓝航线 TW"},
+            {"id":"EN","type":"xapk","region":"EN","label":"Azur Lane EN"},
+            {"id":"JP","type":"xapk","region":"JP","label":"アズールレーン JP"}
+          ]'
+          echo "xapk_servers=$XAPK_SERVERS" >> "$GITHUB_OUTPUT"
+
+      - name: 获取 APK 区服配置
+        id: apk-servers
         run: |
           URL="${{ vars.SERVER_CONFIG_URL }}"
           if [ -z "$URL" ]; then
-            echo "::error::SERVER_CONFIG_URL is not set! Go to Settings → Secrets and variables → Actions → Variables to set it."
-            exit 1
+            echo "::warning::SERVER_CONFIG_URL 未设置，仅构建硬编码的 XAPK 区服。"
+            echo "apk_servers=[]" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          echo "Fetching server config from: $URL"
+          echo "从 $URL 获取 APK 区服配置..."
           curl -sL "$URL" -o server_config.json
-          echo "servers=$(jq -c '.servers' server_config.json)" >> "$GITHUB_OUTPUT"
+          APK_SERVERS=$(jq -c '[.servers[] | select(.type == "apk")]' server_config.json)
+          echo "apk_servers=$APK_SERVERS" >> "$GITHUB_OUTPUT"
 
-      - name: Validate server config
-        run: |
-          COUNT=$(jq '.servers | length' server_config.json)
-          if [ "$COUNT" -eq 0 ]; then
-            echo "::error::Server list is empty — check your SERVER_CONFIG_URL content."
-            exit 1
-          fi
-          echo "✅ Found $COUNT server(s) to build:"
-          jq -r '.servers[] | "   - \(.label) [\(.type | ascii_upcase)]"' server_config.json
-
-      - name: Generate build matrix
+      - name: 合并区服列表并生成构建矩阵
         id: set-matrix
         run: |
-          MATRIX=$(jq -c '{"server": .servers}' server_config.json)
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-          echo "Build matrix: $MATRIX"
+          XAPK='${{ steps.xapk-servers.outputs.xapk_servers }}'
+          APK='${{ steps.apk-servers.outputs.apk_servers }}'
+          ALL_SERVERS=$(jq -c -n --argjson x "$XAPK" --argjson a "$APK" '$x + $a')
+          COUNT=$(echo "$ALL_SERVERS" | jq 'length')
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::没有区服可构建！"
+            exit 1
+          fi
+          echo "✅ 共 $COUNT 个区服待构建："
+          echo "$ALL_SERVERS" | jq -r '.[] | "   - \(.label) [\(.type)]"'
+          echo "matrix={\"server\":$ALL_SERVERS}" >> "$GITHUB_OUTPUT"
+          echo "$ALL_SERVERS" > merged_servers.json
 
       - name: Generate release body header
         run: |
@@ -58,7 +69,7 @@ jobs:
           <summary><b>📋 Servers built in this release</b></summary>
 
           EOF
-          jq -r '.servers[] | "  - \(.label) (`\(.type)`)"' server_config.json >> release_body_header.md
+          jq -r '.[] | "  - \(.label) (`\(.type)`)"' merged_servers.json >> release_body_header.md
           cat >> release_body_header.md << 'EOF'
 
           </details>
