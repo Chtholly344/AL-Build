@@ -32,6 +32,13 @@
 
 ---
 
+## 预览
+<div align="center" >
+  <img src="./assets/images/preview.png" width="500" alt="截图">
+</div>
+
+---
+
 ## 项目目录
 ```
 
